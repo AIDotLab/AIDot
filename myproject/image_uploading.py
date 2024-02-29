@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, url_for, redirect, request
 from werkzeug.utils import secure_filename
 import pika
@@ -35,6 +36,11 @@ def uploader_file():
         #f.save(secure_filename(f.filename))
         f.save('uploads/ori.jpg')
         #return 'file uploaded successfully'
+
+        if os.path.isfile('uploads/inf_a.jpg'):
+            os.remove('uploads/inf_a.jpg')
+        if os.path.isfile('uploads/inf_b.jpg'):
+            os.remove('uploads/inf_b.jpg')
 
         RMQSend('REQUEST_A', 'request model A')
         RMQSend('REQUEST_B', 'request model B')
