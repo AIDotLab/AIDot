@@ -31,6 +31,7 @@ MYSQL_CHARSET = os.getenv("MYSQL_CHARSET")
 RMQ_HOST_NAME = os.getenv("RMQ_HOST_NAME")
 
 CONS_REQUEST_COMMONCODE_NO = '1000000004'
+CONS_REQUEST_SERVERCODE_NO = '1000000006'
 
 def s3_connection():
     try:
@@ -157,12 +158,12 @@ def uploader_file():
                 #, 'dog.jpg', 'dog.jpg', 'demo/dog.jpg', 'https://aidot2024.s3.ap-northeast-2.amazonaws.com/demo/dog.jpg'
                 #, 'demo/dog-a.jpg', 'https://aidot2024.s3.ap-northeast-2.amazonaws.com/demo/dog-a.jpg'
                 #, 'Y', 'Y', '1', 'Y');
-                sql = "INSERT INTO aidot_ana_analysis VALUES (%s, %s, %s, %s, %s, '', %s, SYSDATE(), '', %s, %s, %s, %s, '', '', 'Y', 'Y', '1', 'Y')"
-                dbcur.execute(sql, (ana_analysis_newno, uuid.uuid1(), ana_title, ana_description, ana_aimodel, CONS_REQUEST_COMMONCODE_NO, ori_file_name, mod_file_name, save_s3_path, s3_image_url))
+                sql = "INSERT INTO aidot_ana_analysis VALUES (%s, %s, %s, %s, %s, %s, %s, SYSDATE(), '', %s, %s, %s, %s, '', '', 'Y', 'Y', '1', 'Y')"
+                dbcur.execute(sql, (ana_analysis_newno, uuid.uuid1(), ana_title, ana_description, ana_aimodel, CONS_REQUEST_SERVERCODE_NO, CONS_REQUEST_COMMONCODE_NO, ori_file_name, mod_file_name, save_s3_path, s3_image_url))
+                dbconn.commit()
 
             finally:
                 dbcur.close()
-                dbconn.commit()
                 dbconn.close()
 
             # STEP 4. 분석 요청 큐 생성
@@ -193,8 +194,6 @@ def result():
 
 @app.route('/result/<ana_id>')
 def resultdetail(ana_id):
-    # ana_id = escape(ana_id)
-
     dbconn = connect_to_database()
     if not dbconn:
         return render_template('error.html')
@@ -205,8 +204,7 @@ def resultdetail(ana_id):
               "  FROM aidot_ana_analysis_v " \
               " WHERE ana_public_flag = 'Y' " \
               "   AND ana_use_flag = 'Y' " \
-              "   AND ana_analysis_id = %s " \
-              " ORDER BY ana_analysis_no DESC"
+              "   AND ana_analysis_id = %s "
         print(sql)
         dbcur.execute(sql, ana_id)
         ana_analysis = dbcur.fetchall()
@@ -218,6 +216,68 @@ def resultdetail(ana_id):
         return render_template('error.html')
 
     return render_template('resultdetail.html', ana_analysis=ana_analysis[0])
+
+@app.route('/result/<ana_id>/rerequest')
+def resultrerequest(ana_id):
+    dbconn = connect_to_database()
+    if not dbconn:
+        return render_template('error.html')
+    dbcur = dbconn.cursor()
+
+    try:
+        # STEP 1. 분석 정보 초기화
+        sql = "update aidot_ana_analysis " \
+              "   set ana_aiserver_code = %s " \
+              "     , ana_status_code = %s " \
+              "     , ana_request_date = SYSDATE() " \
+              "     , ana_complete_date = '' " \
+              "     , ana_ana_s3_path = '' " \
+              "     , ana_ana_s3_url = '' " \
+              " where ana_analysis_id = %s"
+        print(sql)
+        dbcur.execute(sql, (CONS_REQUEST_SERVERCODE_NO, CONS_REQUEST_COMMONCODE_NO, ana_id))
+        dbconn.commit()
+
+        # STEP 2. 데이터 조회
+        sql = "SELECT ana_analysis_no " \
+              "  FROM aidot_ana_analysis_v " \
+              " WHERE ana_analysis_id = %s "
+        print(sql)
+        dbcur.execute(sql, ana_id)
+        ana_analysis = dbcur.fetchall()
+
+        if len(ana_analysis) == 0:
+            return render_template('error.html')
+
+        # STEP 3. 분석 요청 큐 생성
+        RMQSend('REQUEST', str(ana_analysis[0][0]))
+        
+    finally:
+        dbcur.close()
+        dbconn.close()
+
+    return redirect(url_for('resultdetail', ana_id=ana_id))
+
+@app.route('/result/<ana_id>/delete')
+def resultdelete(ana_id):
+    dbconn = connect_to_database()
+    if not dbconn:
+        return render_template('error.html')
+    dbcur = dbconn.cursor()
+
+    try:
+        sql = "update aidot_ana_analysis " \
+              "   set ana_use_flag = 'N' " \
+              " where ana_analysis_id = %s"
+        print(sql)
+        dbcur.execute(sql, (ana_id))
+        dbconn.commit()
+
+    finally:
+        dbcur.close()
+        dbconn.close()
+
+    return redirect(url_for('result'))
 
 if __name__ == '__main__':
     #app.run(debug=True)
