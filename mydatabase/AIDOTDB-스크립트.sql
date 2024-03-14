@@ -1,9 +1,13 @@
-
 USE AIDOTDB;
 
 /*
 DELETE FROM aidot_com_code where cod_no in ('1000000008', '1000000009');
 DELETE FROM aidot_ana_analysis where ana_analysis_no in ('1000000006', '1000000007');
+
+update aidot_ana_analysis
+   set ana_aiserver_code = '1000000006'
+ where ana_analysis_no = '1000000005'
+;
 */
 
 SELECT * FROM aidot_com_code;
