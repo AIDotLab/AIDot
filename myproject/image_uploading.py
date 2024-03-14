@@ -1,5 +1,8 @@
 import os
+import uuid
+from datetime import datetime
 from dotenv import load_dotenv
+from markupsafe import escape
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, url_for, redirect, request
 import boto3
@@ -11,6 +14,8 @@ app = Flask(__name__,
             static_folder='uploads')
 
 load_dotenv()
+UPLOAD_ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_S3_BUCKET_REGION = os.getenv("AWS_S3_BUCKET_REGION")
@@ -24,6 +29,23 @@ MYSQL_DB = os.getenv("MYSQL_DB")
 MYSQL_CHARSET = os.getenv("MYSQL_CHARSET")
 
 RMQ_HOST_NAME = os.getenv("RMQ_HOST_NAME")
+
+CONS_REQUEST_COMMONCODE_NO = '1000000004'
+
+def s3_connection():
+    try:
+        s3 = boto3.client(
+            service_name='s3',
+            region_name=AWS_S3_BUCKET_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+        print("s3 bucket connected!")
+        return s3
+    except Exception as e:
+        print(e)
+        #exit(ERROR_S3_CONNECTION_FAILED)
+        return None
 
 def connect_to_database():
     try:
@@ -44,53 +66,158 @@ def RMQSend(topic, message):
     finally:
         connection.close()
 
+def upload_allowed_extension(filename):
+    extension = filename.split('.')[-1]
+    return extension in UPLOAD_ALLOWED_EXTENSIONS
+
+def upload_file_name(filename):
+    sec_file_name = secure_filename(filename)
+    mod_file_name_f = datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '-' + sec_file_name.split('.')[0]
+    mod_file_name_b = sec_file_name.split('.')[-1]
+    mod_file_name = mod_file_name_f + '.' + mod_file_name_b
+    return mod_file_name
+
 @app.route('/')
 def home():
     return render_template('home.html')
 
 @app.route('/upload')
 def upload_file():
-    return render_template('upload.html')
+    dbconn = connect_to_database()
+    if not dbconn:
+        return render_template('error.html')
+    dbcur = dbconn.cursor()
+
+    try:
+        sql = "SELECT * " \
+              "  FROM aidot_com_code " \
+              " WHERE cod_set = 'AIModel' " \
+              "   AND cod_use_flag = 'Y' " \
+              " ORDER BY cod_order"
+
+        dbcur.execute(sql)
+        aimodel_list = dbcur.fetchall()
+    finally:
+        dbcur.close()
+        dbconn.close()
+
+    return render_template('upload.html', aimodel_list=aimodel_list)
 
 @app.route('/uploader', methods=['GET', 'POST'])
 def uploader_file():
     if request.method == 'POST':
-        # TODO: 원본 파일 이름 DB 저장
-        # TODO: 안전한 이름으로 변경해서, 서버에 저장
-        # TODO: S3에 저장
-        # TODO: 관련 정보를 DB Table에 저장
-        f = request.files['file']
-        #f.save(secure_filename(f.filename))
-        f.save('uploads/ori.jpg')
-        #return 'file uploaded successfully'
+        ana_title = request.form['analysis_title']
+        ana_description = request.form['analysis_description']
+        ana_aimodel = request.form['analysis_aimodel']
+        ana_file = request.files['analysis_file']
+        #print(ana_title)
+        #print(ana_description)
+        #print(ana_aimodel)
+        #print(ana_file.filename)
 
-        if os.path.isfile('uploads/inf_a.jpg'):
-            os.remove('uploads/inf_a.jpg')
-        if os.path.isfile('uploads/inf_b.jpg'):
-            os.remove('uploads/inf_b.jpg')
+        if ana_title and len(ana_title) > 5 and \
+            ana_description and len(ana_description) > 5 and \
+            ana_aimodel and len(ana_aimodel) > 5 and \
+            ana_file and upload_allowed_extension(ana_file.filename):
 
-        RMQSend('REQUEST_A', 'request model A')
-        RMQSend('REQUEST_B', 'request model B')
+            # STEP 1. 로컬 서버에 저장
+            ori_file_name = ana_file.filename
+            mod_file_name = upload_file_name(ori_file_name)
+            save_file_path = os.path.join('uploads', mod_file_name)
+            ana_file.save(save_file_path)
+
+            # STEP 2. S3에 저장
+            s3 = s3_connection()
+            try:
+                save_s3_path = save_file_path
+                s3_image_url = f'https://{AWS_S3_BUCKET_NAME}.s3.{AWS_S3_BUCKET_REGION}.amazonaws.com/{save_s3_path}'
+                s3.upload_file(save_file_path, AWS_S3_BUCKET_NAME, save_s3_path)
+            except Exception as e:
+                print(e)
+                return render_template('error.html')
+
+            # STEP 3. 분석 요청을 DB Table에 저장
+            dbconn = connect_to_database()
+            if not dbconn:
+                return render_template('error.html')
+            dbcur = dbconn.cursor()
+
+            try:
+                # STEP 3-1. ana_analysis_no 조회
+                sql = "SELECT IFNULL(MAX(ana_analysis_no), 1000000000) + 1 AS NEWNO " \
+                      "  FROM aidot_ana_analysis"
+                dbcur.execute(sql)
+                ana_analysis_newno = dbcur.fetchall()[0][0]
+                #print(ana_analysis_newno)
+
+                # STEP 3-2. 분석 요청 저장
+                #INSERT INTO aidot_ana_analysis values ('1000000001', 'c33e8032-e11f-11ee-8c68-b11980472f07'
+                #, '강아지 YOLOv8 기본 모델', 'YOLOv8 기본 모델을 사용해서 강아지를 탐지합니다.', '1000000008', '1000000006', '1000000005'
+                #, '2024-03-04 13:10:15', '2024-03-04 13:10:16'
+                #, 'dog.jpg', 'dog.jpg', 'demo/dog.jpg', 'https://aidot2024.s3.ap-northeast-2.amazonaws.com/demo/dog.jpg'
+                #, 'demo/dog-a.jpg', 'https://aidot2024.s3.ap-northeast-2.amazonaws.com/demo/dog-a.jpg'
+                #, 'Y', 'Y', '1', 'Y');
+                sql = "INSERT INTO aidot_ana_analysis VALUES (%s, %s, %s, %s, %s, '', %s, SYSDATE(), '', %s, %s, %s, %s, '', '', 'Y', 'Y', '1', 'Y')"
+                dbcur.execute(sql, (ana_analysis_newno, uuid.uuid1(), ana_title, ana_description, ana_aimodel, CONS_REQUEST_COMMONCODE_NO, ori_file_name, mod_file_name, save_s3_path, s3_image_url))
+
+            finally:
+                dbcur.close()
+                dbconn.commit()
+                dbconn.close()
+
+            # STEP 4. 분석 요청 큐 생성
+            RMQSend('REQUEST', str(ana_analysis_newno))
         
         return redirect(url_for('result'))
 
 @app.route('/result')
 def result():
-    conn = connect_to_database()
-    if not conn:
+    dbconn = connect_to_database()
+    if not dbconn:
         return render_template('error.html')
-    cur = conn.cursor()
+    dbcur = dbconn.cursor()
 
     try:
-        sql = "SELECT * FROM myTable"
-        cur.execute(sql)
-
-        data_list = cur.fetchall()
+        sql = "SELECT * " \
+              "  FROM aidot_ana_analysis_v " \
+              " WHERE ana_public_flag = 'Y' " \
+              "   AND ana_use_flag = 'Y' " \
+              " ORDER BY ana_analysis_no DESC"
+        dbcur.execute(sql)
+        ana_analysis_list = dbcur.fetchall()
     finally:
-        cur.close()
-        conn.close()
+        dbcur.close()
+        dbconn.close()
 
-    return render_template('result.html', data_list=data_list)
+    return render_template('result.html', ana_analysis_list=ana_analysis_list)
+
+@app.route('/result/<ana_id>')
+def resultdetail(ana_id):
+    # ana_id = escape(ana_id)
+
+    dbconn = connect_to_database()
+    if not dbconn:
+        return render_template('error.html')
+    dbcur = dbconn.cursor()
+
+    try:
+        sql = "SELECT * " \
+              "  FROM aidot_ana_analysis_v " \
+              " WHERE ana_public_flag = 'Y' " \
+              "   AND ana_use_flag = 'Y' " \
+              "   AND ana_analysis_id = %s " \
+              " ORDER BY ana_analysis_no DESC"
+        print(sql)
+        dbcur.execute(sql, ana_id)
+        ana_analysis = dbcur.fetchall()
+    finally:
+        dbcur.close()
+        dbconn.close()
+
+    if len(ana_analysis) == 0:
+        return render_template('error.html')
+
+    return render_template('resultdetail.html', ana_analysis=ana_analysis[0])
 
 if __name__ == '__main__':
     #app.run(debug=True)
