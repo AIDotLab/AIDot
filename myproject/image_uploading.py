@@ -9,9 +9,9 @@ import boto3
 import pymysql
 import pika
 
-#app = Flask(__name__)
-app = Flask(__name__,
-            static_folder='uploads')
+app = Flask(__name__)
+#app = Flask(__name__,
+#            static_folder='static')
 
 load_dotenv()
 UPLOAD_ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
