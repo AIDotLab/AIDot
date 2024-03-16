@@ -49,3 +49,10 @@ body,button,input,select,textarea,div,p,a,li{
         padding:32px 32px
     }
 }
+.noticebox .icon i {
+    font-size: 2rem;
+}
+.noticebox-icon {
+    font-size: 2rem;
+    color: #0093c4;
+}

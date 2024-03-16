@@ -24,9 +24,18 @@
                     <h1 class="display-5 fw-bolder">{{ ana_analysis[2] }}</h1>
                     <p class="lead">{{ ana_analysis[3] }}</p>
                     <div class="d-flex justify-content-end">
-                      <button class="btn btn-outline-dark flex-shrink-0" type="button" onclick="history.back()">목록으로</button>&nbsp;
-                      <button class="btn btn-outline-dark flex-shrink-0" type="button" onclick="location.href='/result/{{ ana_analysis[1] }}/rerequest'">재수행</button>&nbsp;
-                      <button class="btn btn-outline-dark flex-shrink-0" type="button" onclick="location.href='/result/{{ ana_analysis[1] }}/delete'">삭제</button>
+                      <button class="btn btn-outline-dark flex-shrink-0" type="button" onclick="location.href='/result'">
+                        <i class="fa-solid fa-list"></i>
+                        목록으로
+                      </button>&nbsp;
+                      <button class="btn btn-outline-dark flex-shrink-0" type="button" onclick="check_rerequest();">
+                        <i class="fa-solid fa-rotate"></i>
+                        재수행
+                      </button>&nbsp;
+                      <button class="btn btn-outline-dark flex-shrink-0" type="button" onclick="check_delete();">
+                        <i class="fa-solid fa-trash"></i>
+                        삭제
+                      </button>
                     </div>
                     <div class="my-3">
                       <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-microchip"></i></span> <b>{{ ana_analysis[6] }}({{ ana_analysis[5] }})</b> </p>
@@ -37,7 +46,7 @@
                       <p class="text-secondary">AI Server</p>
                     </div>
                     <div>
-                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-timeline"></i></span> <b>{{ ana_analysis[14] }}({{ ana_analysis[13] }})</b> </p>
+                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-check-to-slot"></i></span> <b>{{ ana_analysis[14] }}({{ ana_analysis[13] }})</b> </p>
                       <p class="text-secondary">Status: REQUEST, COMPLETE</p>
                     </div>
                     <div>
@@ -133,4 +142,19 @@
         </div>
     </section>
     -->
+    <script type="text/javascript">
+        function check_rerequest() {
+            if (confirm("재수행하시겠습니까?")) {
+                //alert("정상적으로 재수행되었습니다.");
+                location.href='/result/{{ ana_analysis[1] }}/rerequest'
+            }
+        }
+        
+        function check_delete() {
+            if (confirm("삭제하시겠습니까?")) {
+                //alert("정상적으로 삭제되었습니다.");
+                location.href='/result/{{ ana_analysis[1] }}/delete'
+            }
+        }
+    </script>
 {% endblock %}

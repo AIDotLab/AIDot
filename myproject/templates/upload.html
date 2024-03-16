@@ -11,6 +11,16 @@
 {% block content %}
     <section class="py-5">
       <div class="container px-4 px-lg-5 my-5">
+          <div class="row gx-4 gx-lg-5 align-items-center mb-3" id="aidotengine-not-working" style="display:none;">
+            <div class="row noticebox bg-warning p-3">
+              <div class="col-md-1 icon">
+                <i class="fa-brands fa-rocketchat noticebox-icon"></i>
+              </div>
+              <div class="col-md-11 text">
+                AI 엔진이 구동중이지 않습니다. <br /> 관리자에게 문의하세요.
+              </div>
+            </div>
+          </div>
           <div class="row gx-4 gx-lg-5 align-items-center">
             <form action="http://43.203.101.26:5000/uploader"
               method="POST"
@@ -39,4 +49,28 @@
           </div>
       </div>
     </section>
+    <script type="text/javascript">
+    const checkServerStatus = async (url) => {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok; // true if status is 200-299, false otherwise
+      } catch (error) {
+        console.error('Error checking server status:', error);
+        return false;
+      }
+    };
+
+    const url = 'https://43.203.101.26:5001/';
+    checkServerStatus(url).then(isOnline => {
+      //console.log(`Server status for ${url}:`, isOnline ? 'Online' : 'Offline');
+      // id="aidotengine-not-working" style="display:none;">
+      if (isOnline) {
+        console.log('AI Engine status is Online');
+        document.getElementById("aidotengine-not-working").style.display = "none";
+      } else {
+        console.log('AI Engine status is Offline');
+        document.getElementById("aidotengine-not-working").style.display = "";
+      }
+    });
+    </script>
 {% endblock %}
