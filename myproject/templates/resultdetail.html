@@ -13,10 +13,10 @@
         <div class="container px-4 px-lg-5 my-5">
             <div class="row gx-4 gx-lg-5 align-items-center">
                 <div class="col-md-8">
-                    {% if ana_analysis[13] == 'REQUEST' %}
-                    <img class="card-img-top mb-5 mb-md-0" src="{{ ana_analysis[21] }}" alt="{{ ana_analysis[18] }}" />
+                    {% if ana_analysis[10] == 'REQUEST' %}
+                    <img class="card-img-top mb-5 mb-md-0" src="{{ ana_analysis[18] }}" alt="{{ ana_analysis[15] }}" />
                     {% else: %}
-                    <img class="card-img-top mb-5 mb-md-0" src="{{ ana_analysis[23] }}" alt="{{ ana_analysis[18] }}" />
+                    <img class="card-img-top mb-5 mb-md-0" src="{{ ana_analysis[20] }}" alt="{{ ana_analysis[15] }}" />
                     {% endif %}
                 </div>
                 <div class="col-md-4">
@@ -38,19 +38,19 @@
                       </button>
                     </div>
                     <div class="my-3">
-                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-microchip"></i></span> <b>{{ ana_analysis[6] }}({{ ana_analysis[5] }})</b> </p>
+                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-microchip"></i></span> <b>{{ ana_analysis[5] }}({{ ana_analysis[4] }})</b> </p>
                       <p class="text-secondary">AI Model</p>
                     </div>
                     <div>
-                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-server"></i></span> <b>{{ ana_analysis[10] }}({{ ana_analysis[9]}} )</b> </p>
+                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-server"></i></span> <b>{{ ana_analysis[8] }}({{ ana_analysis[7]}} )</b> </p>
                       <p class="text-secondary">AI Server</p>
                     </div>
                     <div>
-                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-check-to-slot"></i></span> <b>{{ ana_analysis[14] }}({{ ana_analysis[13] }})</b> </p>
+                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-check-to-slot"></i></span> <b>{{ ana_analysis[11] }}({{ ana_analysis[10] }})</b> </p>
                       <p class="text-secondary">Status: REQUEST, COMPLETE</p>
                     </div>
                     <div>
-                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-clock"></i></span> <b>{{ ana_analysis[16] }} / {{ ana_analysis[17] }}</b> </p>
+                      <p class="font-weight-bold mb-0"><span><i class="fa-solid fa-clock"></i></span> <b>{{ ana_analysis[13] }} / {{ ana_analysis[14] }}</b> </p>
                       <p class="text-secondary">Request and Complete</p>
                     </div>
                 </div>

@@ -28,12 +28,15 @@ MYSQL_PASSWD = os.getenv("MYSQL_PASSWD")
 MYSQL_DB = os.getenv("MYSQL_DB")
 MYSQL_CHARSET = os.getenv("MYSQL_CHARSET")
 
+RMQ_USERNAME = os.getenv("RMQ_USERNAME")
+RMQ_PASSWORD = os.getenv("RMQ_PASSWORD")
 RMQ_HOST_NAME = os.getenv("RMQ_HOST_NAME")
+RMQ_PORT = os.getenv("RMQ_PORT")
+RMQ_VIRTUAL_HOST = os.getenv("RMQ_VIRTUAL_HOST")
 
-CONS_REQUEST_CODE = '1000000004' # REQUEST
-CONS_COMPLETE_CODE = '1000000005' # COMPLETE
-CONS_REQUEST_SERVER_AI101 = '1000000006' # AI101
-CONS_REQUEST_SERVER_AI102 = '1000000007' # AI102
+CONS_REQUEST_CODE = os.getenv("CONS_REQUEST_CODE")
+CONS_COMPLETE_CODE = os.getenv("CONS_COMPLETE_CODE")
+CONS_SERVER_CODE = os.getenv("CONS_SERVER_CODE")
 
 def s3_connection():
     try:
@@ -59,14 +62,17 @@ def connect_to_database():
         return None
 
 def RMQSend(topic, message):
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RMQ_HOST_NAME))
+    credentials = pika.PlainCredentials(RMQ_USERNAME, RMQ_PASSWORD)
+    parameters = pika.ConnectionParameters(RMQ_HOST_NAME, RMQ_PORT, RMQ_VIRTUAL_HOST, credentials)
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+
     try:
         channel = connection.channel()
-        # props = BasicProperties(content_type='text/plain', delivery_mode=1)
-        # channel.basic_publish('incoming', topic, message, props) # incoming exchange로 publish
         channel.queue_declare(queue=topic)
-        channel.basic_publish(exchange='', routing_key=topic, body=message)
+        channel.basic_publish(exchange='', routing_key=topic, body=str(message))
     finally:
+        channel.close()
         connection.close()
 
 def upload_allowed_extension(filename):
@@ -113,10 +119,6 @@ def uploader_file():
         ana_description = request.form['analysis_description']
         ana_aimodel = request.form['analysis_aimodel']
         ana_file = request.files['analysis_file']
-        #print(ana_title)
-        #print(ana_description)
-        #print(ana_aimodel)
-        #print(ana_file.filename)
 
         if ana_title and len(ana_title) > 5 and \
             ana_description and len(ana_description) > 5 and \
@@ -155,13 +157,13 @@ def uploader_file():
 
                 # STEP 3-2. 분석 요청 저장
                 #INSERT INTO aidot_ana_analysis values ('1000000001', 'c33e8032-e11f-11ee-8c68-b11980472f07'
-                #, '강아지 YOLOv8 기본 모델', 'YOLOv8 기본 모델을 사용해서 강아지를 탐지합니다.', '1000000008', '1000000006', '1000000005'
+                #, '강아지 YOLOv8 기본 모델', 'YOLOv8 기본 모델을 사용해서 강아지를 탐지합니다.', 'YOLOv8Base', 'AI101', 'REQUEST'
                 #, '2024-03-04 13:10:15', '2024-03-04 13:10:16'
                 #, 'dog.jpg', 'dog.jpg', 'demo/dog.jpg', 'https://aidot2024.s3.ap-northeast-2.amazonaws.com/demo/dog.jpg'
                 #, 'demo/dog-a.jpg', 'https://aidot2024.s3.ap-northeast-2.amazonaws.com/demo/dog-a.jpg'
                 #, 'Y', 'Y', '1', 'Y');
                 sql = "INSERT INTO aidot_ana_analysis VALUES (%s, %s, %s, %s, %s, %s, %s, SYSDATE(), '', %s, %s, %s, %s, '', '', 'Y', 'Y', '1', 'Y')"
-                dbcur.execute(sql, (ana_analysis_newno, uuid.uuid1(), ana_title, ana_description, ana_aimodel, CONS_REQUEST_SERVER_AI101, CONS_REQUEST_CODE, ori_file_name, mod_file_name, save_s3_path, s3_image_url))
+                dbcur.execute(sql, (ana_analysis_newno, uuid.uuid1(), ana_title, ana_description, ana_aimodel, CONS_SERVER_CODE, CONS_REQUEST_CODE, ori_file_name, mod_file_name, save_s3_path, s3_image_url))
                 dbconn.commit()
 
             finally:
@@ -169,7 +171,7 @@ def uploader_file():
                 dbconn.close()
 
             # STEP 4. 분석 요청 큐 생성
-            RMQSend('REQUEST', str(ana_analysis_newno))
+            RMQSend('REQUEST', {'analysis_id': str(ana_analysis_newno)})
         
         return redirect(url_for('result'))
 
@@ -237,7 +239,7 @@ def resultrerequest(ana_id):
               "     , ana_ana_s3_url = '' " \
               " where ana_analysis_id = %s"
         print(sql)
-        dbcur.execute(sql, (CONS_REQUEST_SERVER_AI101, CONS_REQUEST_CODE, ana_id))
+        dbcur.execute(sql, (CONS_SERVER_CODE, CONS_REQUEST_CODE, ana_id))
         dbconn.commit()
 
         # STEP 2. 데이터 조회
@@ -252,7 +254,7 @@ def resultrerequest(ana_id):
             return render_template('error.html')
 
         # STEP 3. 분석 요청 큐 생성
-        RMQSend('REQUEST', str(ana_analysis[0][0]))
+        RMQSend('REQUEST', {'analysis_id': str(ana_analysis[0][0])})
         
     finally:
         dbcur.close()

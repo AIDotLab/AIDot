@@ -16,20 +16,20 @@
               {% for item in ana_analysis_list %}
               <div class="col mb-3">
                 <div class="card h-100">
-                  {% if item[13] == 'REQUEST' %}
-                  <img src="{{ item[21] }}" class="card-img-top" alt="{{ item[18] }}">
+                  {% if item[10] == 'REQUEST' %}
+                  <img src="{{ item[18] }}" class="card-img-top" alt="{{ item[15] }}">
                   {% else: %}
-                  <img src="{{ item[23] }}" class="card-img-top" alt="{{ item[18] }}">
+                  <img src="{{ item[20] }}" class="card-img-top" alt="{{ item[15] }}">
                   {% endif %}
                   <div class="card-body">
                     <h5 class="card-title"><a href="/result/{{ item[1] }}">{{ item[2] }}</a></h5>
-                    <p class="card-text">{{ item[6] }} ( {{ item[10] }} ) <br /> {{ item[3] }}</p>
+                    <p class="card-text">{{ item[5] }} ( {{ item[8] }} ) <br /> {{ item[3] }}</p>
                   </div>
                   <div class="card-footer">
-                    {% if item[13] == 'REQUEST' %}
-                    <small class="text-muted">{{ item[16] }}</small>
+                    {% if item[10] == 'REQUEST' %}
+                    <small class="text-muted">{{ item[13] }}</small>
                     {% else: %}
-                    <small class="text-muted">{{ item[17] }}</small>
+                    <small class="text-muted">{{ item[14] }}</small>
                     {% endif %}
                   </div>
                 </div>
