@@ -31,6 +31,7 @@ DROP TABLE aidot_com_aiserver;
 
 CREATE TABLE aidot_com_aiserver (
   ais_no INT NOT NULL,
+  ais_group VARCHAR(20) NOT NULL,
   ais_code VARCHAR(20) NOT NULL,
   ais_name VARCHAR(100),
   ais_description VARCHAR(1000),
