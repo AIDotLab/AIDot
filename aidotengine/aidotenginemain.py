@@ -53,10 +53,11 @@ def queue_process():
     def callback_request(ch, method, properties, body):
         print("Message is Arrived {0} ({1})".format(CONS_REQUEST_CODE, eval(body)))
         # 휴지 상태의 AI 서버를 검색하고, 없으면 0.5초후 다시 검색
-        tmp_body = eval(body)
-        analysis_id = tmp_body['analysis_id']
-        code_AISERVER = ''
-        check_AISERVER = True
+        msq_body = eval(body)
+        analysis_id = msq_body['analysis_id']
+        aiserver_group_code = ''
+        aiserver_code = ''
+        aiserver_check = True
         
         dbconn = connect_to_database()
         if not dbconn:
@@ -65,7 +66,7 @@ def queue_process():
 
         try:
             # 휴지 상태의 AI Server가 있을때까지 무한 순환
-            while check_AISERVER:
+            while aiserver_check:
                 # 휴지 상태의 AI Server 조회
                 sql = "SELECT * " \
                     "  FROM aidot_com_aiserver " \
@@ -78,31 +79,33 @@ def queue_process():
                 if len(aiserver_list) == 0:
                     # 휴지 상태의 AI Server가 없으면 0.5초 후 재조회
                     time.sleep(0.5)
-                    # !!변경된 데이터를 갖고 오기위해 COMMIT 필수!!
+                    # NOTICE: 변경된 데이터를 갖고 오기위해서 COMMIT 함수 호출 필수
                     dbconn.commit()
                     print('NO AISERVER')
                 else:
-                    check_AISERVER = False
-                    code_AISERVER =  aiserver_list[0][1]
-                    print(code_AISERVER)
+                    aiserver_check = False
+                    aiserver_group_code = aiserver_list[0][1]
+                    aiserver_code = aiserver_list[0][2]
+                    print(aiserver_code)
 
                     # AI 서버를 가동 상태로 변경
                     sql = "update aidot_com_aiserver " \
                         "   set ais_status_code = %s " \
                         " where ais_code = %s"
-                    dbcur.execute(sql, (CONS_WORK_CODE, code_AISERVER))
+                    dbcur.execute(sql, (CONS_WORK_CODE, aiserver_code))
 
                     # AI 분석에서 AI 서버도 변경
                     sql = "update aidot_ana_analysis " \
                         "   set ana_aiserver_code = %s " \
                         " where ana_analysis_id = %s"
-                    dbcur.execute(sql, (code_AISERVER, analysis_id))
+                    dbcur.execute(sql, (aiserver_code, analysis_id))
                     dbconn.commit()
         finally:
             dbcur.close()
             dbconn.close()
 
-        RMQSend(CONS_REQUEST_CODE + '-' + code_AISERVER, eval(body))
+        msq_body['aiserver_code'] = aiserver_code
+        RMQSend(CONS_REQUEST_CODE + '-' + aiserver_group_code, msq_body)
 
     # REQUEST 큐 소비
     channel.basic_consume(queue=CONS_REQUEST_CODE,

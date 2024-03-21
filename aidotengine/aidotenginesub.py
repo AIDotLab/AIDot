@@ -23,11 +23,6 @@ CONS_COMPLETE_CODE = os.getenv("CONS_COMPLETE_CODE")
 CONS_PAUSE_CODE = os.getenv("CONS_PAUSE_CODE")
 CONS_WORK_CODE = os.getenv("CONS_WORK_CODE")
 
-# TODO: .ENV와 DOCKER안의 변수를 사용해서 조합
-THIS_AI_SERVER = os.getenv("THIS_AI_SERVER") # 'AI101'
-THIS_REQUEST_CODE = CONS_REQUEST_CODE + '-' + THIS_AI_SERVER
-THIS_COMPLETE_CODE = CONS_COMPLETE_CODE + '-' + THIS_AI_SERVER
-
 def connect_to_database():
     try:
         conn = pymysql.connect(host=MYSQL_HOST, port=MYSQL_PORT, user=MYSQL_USER, passwd=MYSQL_PASSWD, db=MYSQL_DB, charset=MYSQL_CHARSET)
@@ -62,20 +57,21 @@ def queue_process():
     def callback_request(ch, method, properties, body):
         print("Message is Arrived {0} ({1})".format(THIS_REQUEST_CODE, eval(body)))
         # Process 1. REQUEST AI 서버 큐 소비 후, REQUEST AI 서버 큐 생성
-        tmp_body = eval(body)
-        analysis_id = tmp_body['analysis_id']
+        msq_body = eval(body)
+        analysis_id = msq_body['analysis_id']
+        aiserver_code = msq_body['aiserver_code']
 
         # TODO: 이미지 분석, 분석 이미지 정보 Table 조회
 
         # TODO: S3에서 이미지 갖고오기
 
-        # TODO: AI 도커 컨테이너 실행. PT 파일과 이미지 파일 연결, 큐 정보 전달
+        # TODO: AI 도커 컨테이너 실행
+        # 실행되는 도커 이미지가 자신의 ID를 알기 위해 전달해야 함
+        # TMP_THIS_SERVER_CODE = 'AIS101'
 
         # REQUEST-ID 큐 생성
-        # TODO: REQUEST-AI101-2024XXX 이름 수정
         # TODO: Payload 수정. 이미지분석KEY, 작업 AI 서버, AI PT 파일 경로, 원본 이미지 경로
-        tmp_body['aiserver_code'] = THIS_AI_SERVER
-        RMQSend(THIS_REQUEST_CODE + '-' + '0000', tmp_body)
+        RMQSend(CONS_REQUEST_CODE + '-' + aiserver_code, msq_body)
 
     # Process 1. REQUEST AI 서버 큐 소비
     channel_request.basic_consume(queue=THIS_REQUEST_CODE,
@@ -85,13 +81,11 @@ def queue_process():
     def callback_complete(ch, method, properties, body):
         print("Message is Arrived {0} ({1})".format(THIS_COMPLETE_CODE, eval(body)))
         # Process 2. COMPLETE AI 서버 큐 소비 소비 후, 사용이 끝난 AI 서버를 다시 휴지 상태로 변경
-        tmp_body = eval(body)
-        analysis_id = tmp_body['analysis_id']
-        aiserver_code = tmp_body['aiserver_code']
+        msq_body = eval(body)
+        analysis_id = msq_body['analysis_id']
+        aiserver_code = msq_body['aiserver_code']
 
         # TODO: S3에 분석 이미지 저장
-
-        # TODO: AI 도커 컨테이너 종료
 
         # TODO: 이미지 분석, 분석 이미지 정보 Table 저장
 
@@ -128,4 +122,9 @@ def queue_process():
         connection.close()
 
 if __name__ == '__main__':
+    # NOTICE: AI 서버 그룹('AIG101')은 .ENV에 정의되어 있어야 함
+    THIS_AI_SERVER_GROUP = os.getenv("THIS_AI_SERVER_GROUP")
+    THIS_REQUEST_CODE = CONS_REQUEST_CODE + '-' + THIS_AI_SERVER_GROUP
+    THIS_COMPLETE_CODE = CONS_COMPLETE_CODE + '-' + THIS_AI_SERVER_GROUP
+    
     queue_process()

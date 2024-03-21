@@ -36,7 +36,7 @@ RMQ_VIRTUAL_HOST = os.getenv("RMQ_VIRTUAL_HOST")
 
 CONS_REQUEST_CODE = os.getenv("CONS_REQUEST_CODE")
 CONS_COMPLETE_CODE = os.getenv("CONS_COMPLETE_CODE")
-CONS_SERVER_CODE = os.getenv("CONS_SERVER_CODE")
+CONS_AI_SERVER_CODE = os.getenv("CONS_AI_SERVER_CODE")
 
 def s3_connection():
     try:
@@ -163,7 +163,7 @@ def uploader_file():
                 #, 'demo/dog-a.jpg', 'https://aidot2024.s3.ap-northeast-2.amazonaws.com/demo/dog-a.jpg'
                 #, 'Y', 'Y', '1', 'Y');
                 sql = "INSERT INTO aidot_ana_analysis VALUES (%s, %s, %s, %s, %s, %s, %s, SYSDATE(), '', %s, %s, %s, %s, '', '', 'Y', 'Y', '1', 'Y')"
-                dbcur.execute(sql, (ana_analysis_newno, uuid.uuid1(), ana_title, ana_description, ana_aimodel, CONS_SERVER_CODE, CONS_REQUEST_CODE, ori_file_name, mod_file_name, save_s3_path, s3_image_url))
+                dbcur.execute(sql, (ana_analysis_newno, uuid.uuid1(), ana_title, ana_description, ana_aimodel, CONS_AI_SERVER_CODE, CONS_REQUEST_CODE, ori_file_name, mod_file_name, save_s3_path, s3_image_url))
                 dbconn.commit()
 
             finally:
@@ -239,7 +239,7 @@ def resultrerequest(ana_id):
               "     , ana_ana_s3_url = '' " \
               " where ana_analysis_id = %s"
         print(sql)
-        dbcur.execute(sql, (CONS_SERVER_CODE, CONS_REQUEST_CODE, ana_id))
+        dbcur.execute(sql, (CONS_AI_SERVER_CODE, CONS_REQUEST_CODE, ana_id))
         dbconn.commit()
 
         # STEP 2. 데이터 조회
