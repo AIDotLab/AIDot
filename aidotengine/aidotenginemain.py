@@ -3,6 +3,7 @@ import time
 from dotenv import load_dotenv
 import pymysql
 import pika
+import logging
 
 load_dotenv()
 MYSQL_HOST = os.getenv("MYSQL_HOST")
@@ -22,6 +23,12 @@ CONS_REQUEST_CODE = os.getenv("CONS_REQUEST_CODE")
 CONS_COMPLETE_CODE = os.getenv("CONS_COMPLETE_CODE")
 CONS_PAUSE_CODE = os.getenv("CONS_PAUSE_CODE")
 CONS_WORK_CODE = os.getenv("CONS_WORK_CODE")
+
+logging.basicConfig (
+  format = '%(asctime)s:%(levelname)s:%(message)s',
+  datefmt = '%m/%d/%Y %I:%M:%S %p',
+  level = logging.WARNING # DEBUG, INFO, WARNING, ERROR, CRITICAL
+)
 
 def connect_to_database():
     try:
@@ -51,7 +58,7 @@ def queue_process():
     channel.queue_declare(queue=CONS_REQUEST_CODE)
 
     def callback_request(ch, method, properties, body):
-        print("Message is Arrived {0} ({1})".format(CONS_REQUEST_CODE, eval(body)))
+        logging.warning("Message is Arrived {0} ({1})".format(CONS_REQUEST_CODE, eval(body)))
         # 휴지 상태의 AI 서버를 검색하고, 없으면 0.5초후 다시 검색
         msq_body = eval(body)
         analysis_id = msq_body['analysis_id']
@@ -61,7 +68,8 @@ def queue_process():
         
         dbconn = connect_to_database()
         if not dbconn:
-            return print('DB Connection Error.')
+            logging.warning("DB Connection Error.")
+            return 0
         dbcur = dbconn.cursor()
 
         try:
@@ -81,12 +89,12 @@ def queue_process():
                     time.sleep(0.5)
                     # NOTICE: 변경된 데이터를 갖고 오기위해서 COMMIT 함수 호출 필수
                     dbconn.commit()
-                    print('NO AISERVER')
+                    logging.warning("NO AISERVER.")
                 else:
                     aiserver_check = False
                     aiserver_group_code = aiserver_list[0][1]
                     aiserver_code = aiserver_list[0][2]
-                    print(aiserver_code)
+                    logging.warning("AISERVER - {0}".format(aiserver_code))
 
                     # AI 서버를 가동 상태로 변경
                     sql = "update aidot_com_aiserver " \
