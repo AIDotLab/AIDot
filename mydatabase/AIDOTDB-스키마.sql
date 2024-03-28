@@ -27,6 +27,29 @@ SELECT * FROM aidot_com_code;
 ---------------------------------------
 USE AIDOTDB;
 
+DROP TABLE aidot_com_aimodel;
+
+CREATE TABLE aidot_com_aimodel (
+  aim_no INT NOT NULL,
+  aim_group VARCHAR(20) NOT NULL,
+  aim_code VARCHAR(20) NOT NULL,
+  aim_name VARCHAR(100),
+  aim_owner VARCHAR(100),
+  aim_url VARCHAR(300),
+  aim_description VARCHAR(1000),
+  aim_file_path VARCHAR(100),
+  aim_order INT,
+  aim_use_flag VARCHAR(10),
+  aim_status_code VARCHAR(20),
+  aim_admin_flag VARCHAR(10),
+  CONSTRAINT aidot_com_aimodel_PK PRIMARY KEY(aim_no)
+);
+
+SELECT * FROM aidot_com_aimodel;
+
+---------------------------------------
+USE AIDOTDB;
+
 DROP TABLE aidot_com_aiserver;
 
 CREATE TABLE aidot_com_aiserver (
