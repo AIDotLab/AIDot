@@ -136,8 +136,8 @@ def queue_process():
             logging.warning("S3 Download Error.")
             return 0
 
-        # NOTICE: 실행되는 도커 이미지가 자신의 AI Server Code('AIS101')를  알기 위해
-        #         AIDOT ENGINE SUB Process에서 AIDOT ENGINE CORE Process로 전달되어야 함
+        # NOTICE: 실행되는 도커 이미지(컨테이너)가 자신의 AI Server Code('AIS101')를 알기 위해
+        #         AIDOT ENGINE SUB Process에서 AIDOT ENGINE CORE Process로 AI Server Code를 전달되어야 함
         #         ex) MessageQueue: REQUEST-AIG101-AIS101
         #             analysis_id: 1000000005
         #             aiserver_code: AIG101-AIS101

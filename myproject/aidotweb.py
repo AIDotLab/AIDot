@@ -178,7 +178,7 @@ def uploader_file():
                 dbconn.close()
 
             # STEP 4. 분석 요청 큐 생성
-            RMQSend('REQUEST', {'analysis_id': str(analysis_id)})
+            RMQSend('REQUEST', {'analysis_id': str(analysis_id), 'aimodel_code': ana_aimodel}) 
         
         return redirect(url_for('result'))
 
@@ -250,7 +250,7 @@ def resultrerequest(ana_id):
         dbconn.commit()
 
         # STEP 2. 데이터 조회
-        sql = "SELECT ana_analysis_id " \
+        sql = "SELECT ana_analysis_id, ana_aimodel_code " \
               "  FROM aidot_ana_analysis_v " \
               " WHERE ana_analysis_id = %s "
         #print(sql)
@@ -261,7 +261,7 @@ def resultrerequest(ana_id):
             return render_template('error.html')
 
         # STEP 3. 분석 요청 큐 생성
-        RMQSend('REQUEST', {'analysis_id': str(ana_analysis[0][0])})
+        RMQSend('REQUEST', {'analysis_id': str(ana_analysis[0][0]), 'aimodel_code': ana_analysis[0][1]}) 
         
     finally:
         dbcur.close()

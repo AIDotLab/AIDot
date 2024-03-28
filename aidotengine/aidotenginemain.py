@@ -50,6 +50,13 @@ def RMQSend(topic, message):
         channel.close()
         connection.close()
 
+# TODO: 모델이 추가될때마다 수정해야 함
+def tmp_get_AIModel(aimodel_code):
+    models = {}
+    models['YOLOv8Base'] = 'AIG101-AIS101'
+    models['MMDetectionBase'] = 'AIG101-AIS102'
+    return models[aimodel_code]
+
 def queue_process():
     credentials = pika.PlainCredentials(RMQ_USERNAME, RMQ_PASSWORD)
     parameters = pika.ConnectionParameters(RMQ_HOST_NAME, RMQ_PORT, RMQ_VIRTUAL_HOST, credentials)
@@ -62,6 +69,7 @@ def queue_process():
         # 휴지 상태의 AI 서버를 검색하고, 없으면 0.5초후 다시 검색
         msq_body = eval(body)
         analysis_id = msq_body['analysis_id']
+        aimodel_code = msq_body['aimodel_code']
         aiserver_group_code = ''
         aiserver_code = ''
         aiserver_check = True
@@ -73,6 +81,9 @@ def queue_process():
         dbcur = dbconn.cursor()
 
         try:
+            # TODO: 모델이 추가될때마다 수정해야 함
+            tmpAIServer_code = tmp_get_AIModel(aimodel_code)
+
             # 휴지 상태의 AI Server가 있을때까지 무한 순환
             while aiserver_check:
                 # 휴지 상태의 AI Server 조회
@@ -80,8 +91,9 @@ def queue_process():
                     "  FROM aidot_com_aiserver " \
                     " WHERE ais_use_flag = 'Y' " \
                     "   AND ais_status_code = 'PAUSE' " \
+                    "   AND ais_code = %s " \
                     " ORDER BY ais_order"
-                dbcur.execute(sql)
+                dbcur.execute(sql, tmpAIServer_code)
                 aiserver_list = dbcur.fetchall()
 
                 if len(aiserver_list) == 0:
